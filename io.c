@@ -1,39 +1,71 @@
-# Which compiler to use
-CC = gcc
-
-# Compiler flags go here.
-CFLAGS = -g -Wall
-
-# Linker flags go here.
-LDFLAGS = -lcomedi -lm
-
-# list of sources
-ELEVSRC = elev.c io.c main.c
-
-# program executable file name.
-TARGET = lift
-
-# top-level rule, to compile everything.
-all: $(TARGET)
-
-# Define all object files.
-ELEVOBJ = $(ELEVSRC:.c=.o)
-
-# rule to link the program
-$(TARGET): $(ELEVOBJ)
-	$(CC) $^ -o $@ $(LDFLAGS)
-
-# Compile: create object files from C source files.
-%.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@ 
-
-# rule for cleaning re-compilable files.
-clean:
-	rm -f $(TARGET) $(ELEVOBJ)
-
-rebuild:	clean all
-
-.PHONY: all rebuild clean
+// Wrapper for libComedi I/O.
+// These functions provide and interface to libComedi limited to use in
+// the real time lab.
+//
+// 2006, Martin Korsgaard
 
 
-#Martin Korsgaard, 2006
+#include "io.h"
+#include "channels.h"
+
+#include <comedilib.h>
+
+
+static comedi_t *it_g = NULL;
+
+
+
+int io_init() {
+    int i = 0;
+    int status = 0;
+
+    it_g = comedi_open("/dev/comedi0");
+
+    if (it_g == NULL)
+        return 0;
+
+    for (i = 0; i < 8; i++) {
+        status |= comedi_dio_config(it_g, PORT1, i, COMEDI_INPUT);
+        status |= comedi_dio_config(it_g, PORT2, i, COMEDI_OUTPUT);
+        status |= comedi_dio_config(it_g, PORT3, i + 8, COMEDI_OUTPUT);
+        status |= comedi_dio_config(it_g, PORT4, i + 16, COMEDI_INPUT);
+    }
+
+    return (status == 0);
+}
+
+
+
+void io_set_bit(int channel) {
+    comedi_dio_write(it_g, channel >> 8, channel & 0xff, 1);
+}
+
+
+
+void io_clear_bit(int channel) {
+    comedi_dio_write(it_g, channel >> 8, channel & 0xff, 0);
+}
+
+
+
+void io_write_analog(int channel, int value) {
+    comedi_data_write(it_g, channel >> 8, channel & 0xff, 0, AREF_GROUND, value);
+}
+
+
+
+int io_read_bit(int channel) {
+    unsigned int data = 0;
+    comedi_dio_read(it_g, channel >> 8, channel & 0xff, &data);
+
+    return (int)data;
+}
+
+
+
+int io_read_analog(int channel) {
+    lsampl_t data = 0;
+    comedi_data_read(it_g, channel >> 8, channel & 0xff, 0, AREF_GROUND, &data);
+
+    return (int)data;
+}
