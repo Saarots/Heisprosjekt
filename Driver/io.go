@@ -14,7 +14,7 @@ func IoSetBit(channel int){
 	C.io_set_bit(C.int(channel))
 }
 
-func IoClearBit(channel int{
+func IoClearBit(channel int){
 	C.io_clear_bit(C.int(channel))
 }
 
