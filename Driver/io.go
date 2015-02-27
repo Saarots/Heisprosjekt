@@ -4,7 +4,7 @@ package Driver
 #cgo LDFLAGS: -lcomedi -lm -std=c99
 #include "C/io.h"
 */
-import "C"
+import "../C"
 
 func IoInit() int{
 	return int(C.io_init());
